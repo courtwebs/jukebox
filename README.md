@@ -16,20 +16,20 @@ pip3 install youtube-dl
 python3 jukebox.py
 ```
 
-## Controlling the thing
+## Controlling this thing
 You can do two things - you can retrieve the current play queue, or you can queue up a new song.
 
-Getting the current play queue:
+Get the current play queue:
 ```
 wget localhost:8888
 ```
 
-Queuing up a new song:
+Queue up a new song:
 ```
-wget localhost:8888/queue/<uri>
+wget localhost:8888/queue/<id>
 ```
 
-where `<uri>` is the unique identifier of the youtube video you want to pull the audio from.
-E.g., for the url `https://www.youtube.com/watch?v=JJ9IX4zgyLs`, the uri is `JJ9IX4zgyLs`.
+where `<id>` is the unique identifier of the youtube video you want to pull the audio from.
+E.g., for the url `https://www.youtube.com/watch?v=JJ9IX4zgyLs`, the id is `JJ9IX4zgyLs`.
 
 Obviously, unless your firewall is blocking it, you should be able to control your little jukebox from another PC by replacing `localhost` with your pi's IP (or hostname, if you have local DNS).

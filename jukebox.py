@@ -16,11 +16,13 @@ class MainHandler(tornado.web.RequestHandler):
         self.write(playlist)
 
 class QueueHandler(tornado.web.RequestHandler):
-    def get(self, video_uri):
+    def get(self, video_id):
+        self.sanitize(video_id)
+
         queues.download_lock.acquire()
 
         try:
-            url = "https://www.youtube.com/watch?v=" + str(video_uri)
+            url = "https://www.youtube.com/watch?v=" + str(video_id)
             queues.download_queue.append(str(url))
             self.write("Added URL '" + str(url) + "' to the download queue.\n")
         except:
@@ -28,6 +30,17 @@ class QueueHandler(tornado.web.RequestHandler):
             self.write("Unable to add URL '" + str(url) + "' to the download queue.\n")
         finally:
            queues.download_lock.release()
+
+    def sanitize(self, s):
+        """
+        Sanitize s such that it can be included in a command run on the command line
+        and _probably_ not cause any harm.
+        """
+
+        # Our input shouldn't contain spaces
+        s = "".join(s.split())
+
+        return s
 
 def make_app():
     return tornado.web.Application([
