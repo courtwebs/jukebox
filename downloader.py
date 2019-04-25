@@ -2,6 +2,7 @@ import threading
 import subprocess
 import queues
 import time
+import re
 
 class DownloadThread(threading.Thread):
     def __init__(self):
@@ -30,9 +31,9 @@ class DownloadThread(threading.Thread):
         queues.play_lock.acquire()
 
         try:
-            queues.play_queue.append(str(song_name))
+            queues.play_queue.append(str(song))
         except:
-            print("Unable to queue song '" + str(song_name) + "'\n")
+            print("Unable to queue song '" + str(song) + "'\n")
         finally:
             queues.play_lock.release()
 
@@ -55,7 +56,8 @@ class DownloadThread(threading.Thread):
         return output
 
     def get_song_name(self, output):
-        matches = re.search('\[ffmpeg\] Correcting container in "(.*)"', output)
+        output = output.decode('ascii')
+        matches = re.search('\[ffmpeg\] Correcting container in "(.*)"', str(output))
 
         if matches == None:
             # It's alright to return a blank song - when it gets added to the queue, omxplayer will just 

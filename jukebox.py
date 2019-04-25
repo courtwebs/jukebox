@@ -16,10 +16,11 @@ class MainHandler(tornado.web.RequestHandler):
         self.write(playlist)
 
 class QueueHandler(tornado.web.RequestHandler):
-    def get(self, url):
+    def get(self, video_uri):
         queues.download_lock.acquire()
 
         try:
+            url = "https://www.youtube.com/watch?v=" + str(video_uri)
             queues.download_queue.append(str(url))
             self.write("Added URL '" + str(url) + "' to the download queue.\n")
         except:
