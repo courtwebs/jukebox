@@ -6,12 +6,29 @@ import downloader
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        playlist = "Playlist:\n\n"
+        playlist = "Playlist:<br>"
 
-        for i in range(len(queues.play_queue)):
-            playlist += str(i) + ". " + str(queues.play_queue[i]) + "\n"
+        if len(queues.play_queue) == 0:
+            playlist += "Playlist is empty"
+        else:
+            playlist += "<ol>\n"
+
+            for i in range(len(queues.play_queue)):
+                playlist += "<li> " + str(i) + ". " + str(queues.play_queue[i]) + "<\li>\n"
+
+            playlist += "</ol>\n"
 
         print(playlist)
+
+        instructions ="""<br><br>To add a song to the queue:
+        <pre>
+        wget localhost:8888/queue/id
+        </pre>
+
+        where id is the unique identifier of the youtube video you want to pull the audio from.
+        E.g., for the url `https://www.youtube.com/watch?v=JJ9IX4zgyLs`, the id is `JJ9IX4zgyLs`.
+        """
+        playlist += instructions
 
         self.write(playlist)
 
