@@ -10,20 +10,17 @@ class DownloadThread(threading.Thread):
 
     def run(self):
         while True:
+            download_url = self.get_next_download()
 
-            # This is safe to check before the lock is acquired because this thread is the only consumer
-            if len(queues.download_queue) > 0:
-                dl_output = self.download_next_song()
+            if download_url is not None:
+                dl_output = self.download_song(download_url)
 
-                # This is sort of hacky.
-                if dl_output == None:
-                    continue
+                if dl_output is not None:
+                    song_name = self.get_song_name(dl_output)
 
-                song_name = self.get_song_name(dl_output)
-
-                print("Adding " + str(song_name) + " to the play queue")
-
-                self.queue_song(song_name)
+                    if song_name is not None:
+                        print("Adding " + str(song_name) + " to the play queue")
+                        self.queue_song(song_name)
 
             time.sleep(0) # yield execution to another thread
 
@@ -37,20 +34,25 @@ class DownloadThread(threading.Thread):
         finally:
             queues.play_lock.release()
 
-    def download_next_song(self):
+    def get_next_download(self):
+        download_url = None
         queues.download_lock.acquire()
 
         try:
-            download_url = queues.download_queue.popleft()
+            if len(queues.download_queue) > 0:
+                download_url = queues.download_queue.popleft()
         finally:
             queues.download_lock.release()
 
-        print("Downloading song from " + str(download_url))
+        return download_url
+
+    def download_song(self, url):
+        print("Downloading song from " + str(url))
 
         try:
-            output = subprocess.check_output(['youtube-dl', '-f', 'm4a', download_url])
+            output = subprocess.check_output(['youtube-dl', '-f', 'm4a', url])
         except:
-            print("Unable to download song from '" + download_url)
+            print("Unable to download song from '" + url)
             return None
 
         return output
@@ -60,9 +62,7 @@ class DownloadThread(threading.Thread):
         matches = re.search('\[ffmpeg\] Correcting container in "(.*)"', str(output))
 
         if matches == None:
-            # It's alright to return a blank song - when it gets added to the queue, omxplayer will just 
-            # try to play nothing, quit, and things will go on fine
-            songname = ""
+            songname = None
         else:
             songname = matches.group(1)
 

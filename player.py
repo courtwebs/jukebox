@@ -3,6 +3,8 @@ import subprocess
 import queues
 import time
 
+OUTPUT_DEVICE = 'local'
+
 class PlayThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -22,7 +24,7 @@ class PlayThread(threading.Thread):
                 print("Playing song '" + str(song))
                 
                 try:
-                    subprocess.check_output(['omxplayer', '-o', 'alsa', song])
+                    subprocess.check_output(['omxplayer', '-o', OUTPUT_DEVICE, song])
                 except:
                     print("Unable to play song '" + song)
 
