@@ -5,6 +5,7 @@ import player
 import downloader
 
 NUM_DOWNLOAD_THREADS = 5
+YOUTUBE_PREFIX = "https://www.youtube.com/watch?v=" 
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -12,7 +13,15 @@ class MainHandler(tornado.web.RequestHandler):
         self.write(page)
 
     def make_add_song_form(self):
-        return """To add a song to the queue:
+        form = """
+        <form>
+        Song URL: 
+        <input type="text" name="song">
+        <input type="submit" action="/queue">
+        </form>
+        """
+        return form
+        """To add a song to the queue:
         <pre>
         wget localhost:8888/queue/id
         </pre>
@@ -37,19 +46,19 @@ class MainHandler(tornado.web.RequestHandler):
         return playlist
 
 class RemoveSongHandler(tornado.web.RequestHandler):
-    def post(self, song_index):
-        play_lock.acquire()
+    def get(self, song_index):
+        queues.play_lock.acquire()
 
         try:
-            song_name = play_queue[int(song_index)]
-            del queues.play_queue[int(song_index)]
+            list_index = int(song_index) - 1
+            song_name = queues.play_queue[list_index]
+            del queues.play_queue[list_index]
+            print("Removed song '" + str(song_name) + "' at index '" + str(song_index) + "'\n")
+            self.write("Removed song '" + str(song_name) + "' at index '" + str(song_index) + "'\n")
         except:
             print("Unable to remove song at index " + str(song_index))
         finally:
             queues.play_lock.release()
-
-        print("Removed song '" + str(song_name) + "' at index '" + str(song_index) + "'\n")
-        self.write("Removed song '" + str(song_name) + "' at index '" + str(song_index) + "'\n")
 
 class QueueHandler(tornado.web.RequestHandler):
     def get(self, video_id):
@@ -58,7 +67,7 @@ class QueueHandler(tornado.web.RequestHandler):
         queues.download_lock.acquire()
 
         try:
-            url = "https://www.youtube.com/watch?v=" + str(video_id)
+            url = YOUTUBE_PREFIX + str(video_id)
             queues.download_queue.append(str(url))
             self.write("Added URL '" + str(url) + "' to the download queue.\n")
         except:
@@ -78,10 +87,22 @@ class QueueHandler(tornado.web.RequestHandler):
 
         return s
 
+class DebugHandler(tornado.web.RequestHandler):
+    def get(self, args):
+        print("Debug handler received args = " + str(args))
+
+    def post(self, args):
+        print("Debug handler received args = " + str(args))
+
+    def put(self, args):
+        print("Debug handler received args = " + str(args))
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
-        (r"/queue/(.*)", QueueHandler)
+        (r"/queue/(.*)", QueueHandler),
+        (r"/del/(.*)", RemoveSongHandler),
+        (r"/(.*)", DebugHandler),
     ])
 
 if __name__ == "__main__":
