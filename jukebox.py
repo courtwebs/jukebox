@@ -13,26 +13,66 @@ SONG_LIBRARY_DIR = "library"
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        page = self.make_add_song_form() + "<br><br>" + self.get_now_playing() + "<br><br>" + self.get_playlist()
+        page = self.get_now_playing() + "<br><br>" + self.get_playlist() + "<br><br>" + self.make_instructions() 
         self.write(page)
 
-    def make_add_song_form(self):
-        form = """
-        <form>
-        Song URL: 
-        <input type="text" name="song">
-        <input type="submit" action="/queue">
-        </form>
-        """
-        return form
-        """To add a song to the queue:
+    def make_instructions(self):
+        form = """<h1>Controlling The Jukebox</h1>
+        I'm terrible at web development, so you won't find any buttons that do stuff. Everything is controlled through GET requests. Here's what you can do:
+
+        <h2>Add a song to the queue by URL</h2>
+        
+        To add a song to the queue:
         <pre>
-        wget localhost:8888/queue/id
+        wget jukebox:8888/queue/id
         </pre>
 
         where id is the unique identifier of the youtube video you want to pull the audio from.
-        E.g., for the url `https://www.youtube.com/watch?v=JJ9IX4zgyLs`, the id is `JJ9IX4zgyLs`.
+        E.g., for the url "https://www.youtube.com/watch?v=JJ9IX4zgyLs", the id is "JJ9IX4zgyLs".
+
+        Alternatively, you can add an already downloaded song to the queue via the library.
+
+        <h2>Add a song to the queue from the library</h2>
+
+        To list the songs in the library, navigate to:
+
+        <pre>
+        jukebox:8888/library
+        </pre>
+
+        To play a song from the library:
+
+        <pre>
+        wget jukebox:8888/play/id
+        </pre>
+
+        where id is the song's position in the list. E.g. if the library looks like this:
+
+        <pre>
+        1. Rick Astley - Never Gonna Give You Up (Video)-dQw4w9WgXcQ.m4a
+        2. Tom Jones - 'It's Not Unusual' (With Lyrics)-kWvbJsB0OBc.m4a
+        3. Tom Jones - Whats New Pussycat - Lyrics-Ga3I5DTIA-E.m4a
+        4. Nyan Cat [original]-QH2-TGUlwu4.m4a
+        </pre>
+
+        and you'd like to play "What's New Pussycat", then:
+
+        <pre>
+        wget jukebox:8888/play/3
+        </pre>
+
+        <h2>Remove a song from the queue</h2>
+
+        To remove a song from the queue:
+
+        <pre>
+        wget jukebox:8888/del/id
+        </pre>
+
+        where id is the song's position in the playlist.
         """
+
+        return form
 
     def get_playlist(self):
         playlist = "Playlist:<br>"
@@ -108,6 +148,33 @@ class LibraryHandler(tornado.web.RequestHandler):
 
         self.write(page)
 
+class PlayHandler(tornado.web.RequestHandler):
+    def get(self, song_id):
+        """Queues an already downloaded song from the library"""
+
+        # This is the dumbest way we could do this. This should return songs in the same 
+        # order every time. But, if a song download is initiated between when the user 
+        # looked up the library and made the request to play a song from the library, it's 
+        # going to shift the indices of some of the songs in the library, and we'll end up 
+        # playing the wrong song.
+        songs = os.listdir()
+
+        # This might be a bad idea. In theory, the player thread should never hold the 
+        # play lock for more than an instant. But... if it does hold it for a long time,
+        # it's going to DoS the main thread serving requests because of this.
+        queues.play_lock.acquire()
+
+        try:
+            list_id = int(song_id) - 1
+            queues.play_queue.append(songs[list_id])
+            print("Added song '" + str(songs[list_id]) + "' to the play queue")
+            self.write("Added song '" + str(songs[list_id]) + "' to the play queue")
+        except:
+            print("Unable to queue song at library index '" + str(song_id) + "'")
+            self.write("Unable to queue song at library index '" + str(song_id) + "'")
+        finally:
+            queues.play_lock.release()
+
 class DebugHandler(tornado.web.RequestHandler):
     def get(self, args):
         print("Debug handler received args = " + str(args))
@@ -124,6 +191,7 @@ def make_app():
         (r"/queue/(.*)", QueueHandler),
         (r"/del/(.*)", RemoveSongHandler),
         (r"/library", LibraryHandler),
+        (r"/play/(.*)", PlayHandler),
         (r"/(.*)", DebugHandler),
     ])
 
