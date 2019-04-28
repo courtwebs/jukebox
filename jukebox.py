@@ -3,9 +3,11 @@ import tornado.web
 import queues
 import player
 import downloader
+import os
 
 NUM_DOWNLOAD_THREADS = 5
-YOUTUBE_PREFIX = "https://www.youtube.com/watch?v=" 
+YOUTUBE_PREFIX = "https://www.youtube.com/watch?v="
+SONG_LIBRARY_DIR = "library"
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -87,6 +89,19 @@ class QueueHandler(tornado.web.RequestHandler):
 
         return s
 
+class LibraryHandler(tornado.web.RequestHandler):
+    def get(self):
+        page = "Library:<br><ol>"
+
+        songs = os.listdir()
+
+        for song in songs:
+            page += "<li>" + str(song) + "</li>"
+
+        page += "</ol>"
+
+        self.write(page)
+
 class DebugHandler(tornado.web.RequestHandler):
     def get(self, args):
         print("Debug handler received args = " + str(args))
@@ -102,10 +117,12 @@ def make_app():
         (r"/", MainHandler),
         (r"/queue/(.*)", QueueHandler),
         (r"/del/(.*)", RemoveSongHandler),
+        (r"/library", LibraryHandler),
         (r"/(.*)", DebugHandler),
     ])
 
 if __name__ == "__main__":
+    os.chdir(os.getcwd() + os.sep + SONG_LIBRARY_DIR)
     # One player thread to rule them all
     playthread = player.PlayThread()
     playthread.start()
