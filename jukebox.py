@@ -1,9 +1,11 @@
 import tornado.ioloop
 import tornado.web
+import os
+
 import queues
 import player
 import downloader
-import os
+import status
 
 NUM_DOWNLOAD_THREADS = 5
 YOUTUBE_PREFIX = "https://www.youtube.com/watch?v="
@@ -11,7 +13,7 @@ SONG_LIBRARY_DIR = "library"
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        page = self.make_add_song_form() + "<br><br>" + self.get_playlist()
+        page = self.make_add_song_form() + "<br><br>" + self.get_now_playing() + "<br><br>" + self.get_playlist()
         self.write(page)
 
     def make_add_song_form(self):
@@ -46,6 +48,10 @@ class MainHandler(tornado.web.RequestHandler):
             playlist += "</ol>\n"
 
         return playlist
+
+    def get_now_playing(self):
+        now_playing = "Now playing: " + str(status.now_playing)
+        return now_playing
 
 class RemoveSongHandler(tornado.web.RequestHandler):
     def get(self, song_index):

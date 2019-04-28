@@ -2,6 +2,7 @@ import threading
 import subprocess
 import queues
 import time
+import status
 
 OUTPUT_DEVICE = 'local'
 
@@ -22,10 +23,13 @@ class PlayThread(threading.Thread):
                     queues.play_lock.release()
 
                 print("Playing song '" + str(song))
+                status.now_playing = song
                 
                 try:
                     subprocess.check_output(['omxplayer', '-o', OUTPUT_DEVICE, song])
                 except:
                     print("Unable to play song '" + song)
+
+                status.now_playing = ""
 
             time.sleep(0) # yield execution to another thread
