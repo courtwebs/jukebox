@@ -5,6 +5,7 @@ import os
 import queues
 import player
 import downloader
+import speak
 import status
 
 NUM_DOWNLOAD_THREADS = 5
@@ -20,7 +21,7 @@ class MainHandler(tornado.web.RequestHandler):
         form = """<h1>Controlling The Jukebox</h1>
         I'm terrible at web development, so you won't find any buttons that do stuff. Everything is controlled through GET requests. Here's what you can do:
 
-        <h2>Add a song to the queue by URL</h2>
+        <h2>Add a song to the queue by YouTube URL</h2>
         
         To add a song to the queue:
         <pre>
@@ -70,6 +71,12 @@ class MainHandler(tornado.web.RequestHandler):
         </pre>
 
         where id is the song's position in the playlist.
+        <h2>Make it talk</h2>
+        To make the jukebox talk:
+
+        <pre>
+        wget jukebox:8888/speak/your_sentence_with_underscores
+        </pre>
         """
 
         return form
@@ -175,6 +182,19 @@ class PlayHandler(tornado.web.RequestHandler):
         finally:
             queues.play_lock.release()
 
+class SpeakHandler(tornado.web.RequestHandler):
+    def get(self, sentence):
+        sentence = sentence.replace('_', ' ')
+        queues.speak_lock.acquire()
+
+        try:
+            queues.speak_queue.append(sentence)
+            print("Added speech '" + sentence + "' to the speak queue")
+        except:
+            print("Unable to add speech '" + setnence + "' to the speak queue")
+        finally:
+            queues.speak_lock.release()
+
 class DebugHandler(tornado.web.RequestHandler):
     def get(self, args):
         print("Debug handler received args = " + str(args))
@@ -192,6 +212,7 @@ def make_app():
         (r"/del/(.*)", RemoveSongHandler),
         (r"/library", LibraryHandler),
         (r"/play/(.*)", PlayHandler),
+        (r"/speak/(.*)", SpeakHandler),
         (r"/(.*)", DebugHandler),
     ])
 
@@ -200,6 +221,11 @@ if __name__ == "__main__":
     # One player thread to rule them all
     playthread = player.PlayThread()
     playthread.start()
+
+    # Creating speech files shouldn't be a time consuming task,
+    # so we have just the one thread
+    speakthread = speak.SpeakThread()
+    speakthread.start()
 
     # Multiple download threads for concurrent downloads
     for i in range(NUM_DOWNLOAD_THREADS):
